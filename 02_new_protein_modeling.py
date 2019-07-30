@@ -7,23 +7,23 @@ from collections import defaultdict
 import pyrosetta
 pyrosetta.init()
 import argparse
+from distutils.spawn import find_executable
+from pathlib import Path
+HERE = Path(__file__).parent
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-f", "--folder", required=True, help="Enter into the folder")
 args = vars(ap.parse_args())
 
-# emboss_needle = "/Users/kirubakaran/emboss/bin/needle"
-# tempate_seqs = glob.glob("/Users/kirubakaran/projects/kinase_project/updated_BLAminus_pdbs/template_fasta_seq_training_set/*.fasta")
-# apo_pdbs = '/Users/kirubakaran/projects/kinase_project/updated_BLAminus_pdbs/apo_pdbs_for_template_seq_extraction'
+emboss_needle = find_executable('needle')
+apo_pdbs = (HERE / 'data' / 'database_files' / 'apo_pdbs_for_template_seq_extraction')
+tempate_seqs = (HERE / 'data' / 'database_files' / 'template_fasta_seq_training_set').glob('*.fasta')
 
-emboss_needle = "/home/kiruba/softwares/emboss/bin/needle"
-tempate_seqs = glob.glob("/home/kiruba/db_files/template_fasta_seq_training_set/*.fasta")
-apo_pdbs = '/home/kiruba/db_files/apo_pdbs_for_template_seq_extraction'
 
 # Sequence alignment using EMBOSS
 
 def emboss_needle_search(emboss_needle, target_seq_path, template_seq_path):
-    
+
     for template_seq in template_seq_path:
         target_seq_id = os.path.basename(target_seq_path).split('.')[0]
         template_seq_id = os.path.basename(template_seq).split('.')[0]
@@ -33,7 +33,7 @@ def emboss_needle_search(emboss_needle, target_seq_path, template_seq_path):
 # Select top 10 hit templates based on Template Score method
 
 def select_top_hits_from_emboss_and_rocs_pdb(emboss_align_file_path, rocs_align_file_path, target_seq_path):
-    
+
     emboss_result = pd.DataFrame(columns = ('query', 'template', 'length', 'identity', 'similarity', 'gaps', 'score'))
     emboss_ind = 1
     for emboss_alignment_file in emboss_align_file_path:
@@ -58,17 +58,17 @@ def select_top_hits_from_emboss_and_rocs_pdb(emboss_align_file_path, rocs_align_
             emboss_result.loc[emboss_ind] = query, template, float(length), float(identity), float(similarity), float(gaps), float(score)
             emboss_ind += 1
 
-    # Here ranking the df in descending (ascending=False) order and if found two scores are same 
-    # then assign the same rank. Dense rank does not skip any rank (in min and max ranks are skipped))    
+    # Here ranking the df in descending (ascending=False) order and if found two scores are same
+    # then assign the same rank. Dense rank does not skip any rank (in min and max ranks are skipped))
     emboss_result['score_rank'] = emboss_result['score'].rank(method='dense', ascending=False)
 
     rocs_single_rpt_df = pd.read_csv(rocs_align_file_path, sep=",")
     rocs_single_rpt_df["row_name_and_shapequery_conc"] = rocs_single_rpt_df["Name"].str.cat(rocs_single_rpt_df["ShapeQuery"], sep="_")
     rocs_result = rocs_single_rpt_df.loc[:, ["row_name_and_shapequery_conc","TanimotoCombo"]].rename(columns={"row_name_and_shapequery_conc":"rocs_pdb"})
     rocs_result['TanimotoCombo_rank'] = rocs_result['TanimotoCombo'].rank(method = 'dense', ascending=False)
-    
+
     check_the_rocs_pdb_len = rocs_result["rocs_pdb"][0]
-    
+
     if len(check_the_rocs_pdb_len.split("_")) == 7:
         rocs_result["rocs_template"] = rocs_result["rocs_pdb"].str.split("_").apply(lambda x: "_".join(x[3:5]))
         total = rocs_result.merge(emboss_result, left_on="rocs_template", right_on="template", how="left")
@@ -86,11 +86,11 @@ def select_top_hits_from_emboss_and_rocs_pdb(emboss_align_file_path, rocs_align_
         final_hit_list_df = final_hit_list_df.drop_duplicates(subset='template', keep="first")
         final_hit_list_df = final_hit_list_df.sort_values('final_rank', ascending=True)
         final_hit_list_df.iloc[:10].to_csv('protein_comp_modeling/template_hits.csv', sep=',', index=False)
-    
-# Top 10 Modeling of target protein using 10 templates 
+
+# Top 10 Modeling of target protein using 10 templates
 
 def modeling(template_hits, template_pdb_path, alignment_file_path, target_seq_path):
-        
+
     templates = pd.read_csv(template_hits, sep=",")
     target_seq = os.path.basename(target_seq_path).split('.')[0]
     templates['tar_tem_seq_alin'] = templates['template'].apply(lambda x: "{}_{}.needle".format(target_seq, x))
@@ -123,7 +123,7 @@ def modeling(template_hits, template_pdb_path, alignment_file_path, target_seq_p
                 elif line.startswith('#'):
                     parse2 = False
                 else:
-                    template_aligned_seq += line    
+                    template_aligned_seq += line
         aligned_seq[target_template_file_name].append(target_aligned_seq)
         aligned_seq[target_template_file_name].append(template_aligned_seq)
 
@@ -137,7 +137,7 @@ def modeling(template_hits, template_pdb_path, alignment_file_path, target_seq_p
             if not alignment_file[1][i] == '-':
                 target_seq_based_on_temp_pdb += alignment_file[0][i]
         target_seq_for_modeling[name]=target_seq_based_on_temp_pdb
-    
+
     final_target_template_for_modeling = {}
     for target_template, target_final_seq in target_seq_for_modeling.items():
         template_name = '_'.join(target_template.split('_')[1:])
@@ -163,7 +163,7 @@ def modeling(template_hits, template_pdb_path, alignment_file_path, target_seq_p
 # Protein Ligand concatenation
 
 def protein_ligand_concatenation (template_hits, target_fasta_file, ligands):
-    
+
     templates_df = pd.read_csv(template_hits, sep=",")
     # first templatePDB in a template Column
     top_first_hit_pdb = templates_df["template"].iloc[0]
@@ -174,7 +174,7 @@ def protein_ligand_concatenation (template_hits, target_fasta_file, ligands):
     for lig in ligands:
         protein_model = os.path.join(target_pdb_path, top_hit_model)
         basename_ligand = os.path.splitext(os.path.basename(lig))[0]
-        complex_protein_ligand = '{0}_{1}.pdb'.format(top_hit_model.split('.')[0], basename_ligand)        
+        complex_protein_ligand = '{0}_{1}.pdb'.format(top_hit_model.split('.')[0], basename_ligand)
         print('cat {0} {1} > protein_ligand_complex_top_1_comp_model/{2}'.format(protein_model, lig, complex_protein_ligand))
         os.system('cat {0} {1} > protein_ligand_complex_top_1_comp_model/{2}'.format(protein_model, lig, complex_protein_ligand))
 

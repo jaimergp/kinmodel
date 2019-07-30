@@ -4,35 +4,36 @@ import os
 import glob
 import pandas as pd
 import argparse
+from pathlib import Path
+HERE = Path(__file__).parent
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-f", "--folder", required=True, help="Enter into the folder")
 args = vars(ap.parse_args())
 
-# Common paths 
+# Common paths
 
-# OMEGA = "/usr/local/bin/omega2"
-# ROCS = "/usr/local/bin/rocs"
-# mol2params = "/usr/bin/python2.7 /Users/kirubakaran/Rosetta/main/source/scripts/python/public/molfile_to_params_kiruba_modified.py"
-# template_lig_library = glob.glob("/Users/kirubakaran/projects/kinase_project/updated_BLAminus_pdbs/template_ligand_library_training_set_final/*.pdb")
+ROSETTA_ROOT = os.environ.get('ROSETTA_ROOT', os.path.expanduser('~/.local/rosetta_bin_linux_2019.22.60749_bundle'))
+OPENEYE_ROOT = os.environ.get('OPENEYE_ROOT', os.path.expanduser('~/.local/openeye'))
 
-
-OMEGA = "/home/kiruba/softwares/openeye/arch/suse-SLE12-x64/omega/omega2"
-ROCS = "/home/kiruba/softwares/openeye/arch/suse-SLE12-x64/rocs/rocs"
-mol2params = "python /home/kiruba/softwares/Rosetta/main/source/scripts/python/public/generic_potential/mol2genparams.py"
-template_lig_library = glob.glob("/home/kiruba/db_files/template_ligand_library_training_set_final/*.pdb")
+OMEGA = f"{OPENEYE_ROOT}/arch/suse-SLE12-x64/omega/omega2"
+ROCS = f"{OPENEYE_ROOT}/arch/suse-SLE12-x64/rocs/rocs"
+mol2params = f"python {ROSETTA_ROOT}/main/source/scripts/python/public/generic_potential/mol2genparams.py"
+# mol2params = f"python {HERE / "molfile_to_params_kiruba_modified.py}"
+template_lig_library = (HERE / 'data' / 'database_files' / 'template_ligand_library_training_set_final').glob('*.pdb')
 
 # Conformer generation using OMEGA openeye (added new flag for resolving the missing MMFF parameters in ligand using -strictatomtyping false)
 
 def conf_gen(smi,maxconfs=2000):
-    
+
     smi_prefix = os.path.splitext(os.path.basename(smi))[0]
     print('{0} -in {1}/{2} -out {1}/OMEGA/{3}_omega.sdf -prefix {1}/OMEGA/{3}_omega -warts true -maxconfs {4} -strict false'.format(OMEGA, os.getcwd(), smi, smi_prefix, maxconfs))
 
 # ligand alignment using ROCS openeye
 
 def lig_alignment(conformer, template_database, rocs_maxconfs_output=100):
-    
+
     sdf_prefix = os.path.basename(os.path.splitext(conformer)[0]).split('_')[0]
     for template in template_database:
         template_id = "_".join(os.path.basename(template).split("_")[0:3])
@@ -42,7 +43,7 @@ def lig_alignment(conformer, template_database, rocs_maxconfs_output=100):
 # Combine each report file into single file
 
 def combine_report_files(report_file):
-    
+
     dataframeList = []
     for report in report_file:
         target_template_file_name = os.path.basename(report).replace("_1.rpt", "")
@@ -61,7 +62,7 @@ def combine_report_files(report_file):
 # Seperate the top 100 conformer hits from ROCS alignment sdf files
 
 def sep_hits_from_rocs_sdf_file(top_100_hits_txt_path):
-    
+
     with open (top_100_hits_txt_path) as open_file:
         dict_sdf_file_name = {}
         for line in open_file:
@@ -96,12 +97,12 @@ def sdftoparams(mol2params, top_hits_sdf_path):
         os.system('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
 
 #def sdftoparams(mol2params, top_hits_sdf_path):
-    
+
 #    for file in top_hits_sdf_path:
 #        out_put_file_name = os.path.splitext(os.path.basename(file))[0]
 #        print('{0} {1} -p sdf2params/{2}'.format(mol2params, file, out_put_file_name))
 #        os.system('{0} {1} -p sdf2params/{2}'.format(mol2params, file, out_put_file_name))
-   
+
 currentWD = os.getcwd()
 os.chdir(args['folder'])
 
@@ -114,7 +115,7 @@ lig_alignment(glob.glob("OMEGA/*.sdf")[0], template_lig_library, rocs_maxconfs_o
 combine_report_files(glob.glob("ROCS/*.rpt"))
 
 os.mkdir("top_100_conf")
-sep_hits_from_rocs_sdf_file("ROCS/top_100.txt") 
+sep_hits_from_rocs_sdf_file("ROCS/top_100.txt")
 
 os.mkdir("mol2params")
 sdftoparams(mol2params, glob.glob("top_100_conf/*.sdf"))
