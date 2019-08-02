@@ -4,6 +4,8 @@
 - Refactor scripts -> library/app layers
 - Lots of absolute paths (shebang, executables, in-house datasets)
 - Uncouple IO from calculation
+- It relies on applications rather than libraries. For example, the
+  OpenEye toolkits could be used instead of the applications.
 
 # Proposed architecture
 

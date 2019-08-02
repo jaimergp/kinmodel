@@ -1,4 +1,3 @@
-#!/home/kiruba/softwares/miniconda3/bin/python
 
 import os
 import glob
@@ -17,11 +16,11 @@ args = vars(ap.parse_args())
 ROSETTA_ROOT = os.environ.get('ROSETTA_ROOT', os.path.expanduser('~/.local/rosetta_bin_linux_2019.22.60749_bundle'))
 OPENEYE_ROOT = os.environ.get('OPENEYE_ROOT', os.path.expanduser('~/.local/openeye'))
 
-OMEGA = f"{OPENEYE_ROOT}/arch/suse-SLE12-x64/omega/omega2"
-ROCS = f"{OPENEYE_ROOT}/arch/suse-SLE12-x64/rocs/rocs"
+OMEGA = f"{OPENEYE_ROOT}/bin/omega2"
+ROCS = f"{OPENEYE_ROOT}/bin/rocs"
 mol2params = f"python {ROSETTA_ROOT}/main/source/scripts/python/public/generic_potential/mol2genparams.py"
 # mol2params = f"python {HERE / "molfile_to_params_kiruba_modified.py}"
-template_lig_library = (HERE / 'data' / 'database_files' / 'template_ligand_library_training_set_final').glob('*.pdb')
+template_lig_library = [p.resolve() for p in (HERE / 'data' / 'database_files' / 'template_ligand_library_training_set_final').glob('*.pdb')]
 
 # Conformer generation using OMEGA openeye (added new flag for resolving the missing MMFF parameters in ligand using -strictatomtyping false)
 
@@ -29,6 +28,7 @@ def conf_gen(smi,maxconfs=2000):
 
     smi_prefix = os.path.splitext(os.path.basename(smi))[0]
     print('{0} -in {1}/{2} -out {1}/OMEGA/{3}_omega.sdf -prefix {1}/OMEGA/{3}_omega -warts true -maxconfs {4} -strict false'.format(OMEGA, os.getcwd(), smi, smi_prefix, maxconfs))
+    os.system('{0} -in {1}/{2} -out {1}/OMEGA/{3}_omega.sdf -prefix {1}/OMEGA/{3}_omega -warts true -maxconfs {4} -strict false'.format(OMEGA, os.getcwd(), smi, smi_prefix, maxconfs))
 
 # ligand alignment using ROCS openeye
 
@@ -91,9 +91,9 @@ def sdftoparams(mol2params, top_hits_sdf_path):
 
     for file in top_hits_sdf_path:
         out_put_file_name = os.path.splitext(os.path.basename(file))[0]
-#        print('/home/kiruba/softwares/miniconda3/bin/obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
-#        os.system('/home/kiruba/softwares/miniconda3/bin/obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
-#        print('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
+        print('obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
+        os.system('obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
+        print('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
         os.system('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
 
 #def sdftoparams(mol2params, top_hits_sdf_path):
@@ -110,7 +110,7 @@ os.mkdir("OMEGA")
 conf_gen(glob.glob("*.smi")[0], maxconfs=1000)
 
 os.mkdir("ROCS")
-lig_alignment(glob.glob("OMEGA/*.sdf")[0], template_lig_library, rocs_maxconfs_output=30)
+lig_alignment(glob.glob("OMEGA/*.sdf")[0], template_lig_library[:10], rocs_maxconfs_output=30)
 
 combine_report_files(glob.glob("ROCS/*.rpt"))
 
