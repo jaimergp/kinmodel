@@ -16,8 +16,8 @@ ap.add_argument("-f", "--folder", required=True, help="Enter into the folder")
 args = vars(ap.parse_args())
 
 emboss_needle = find_executable('needle')
-apo_pdbs = (HERE / 'data' / 'database_files' / 'apo_pdbs_for_template_seq_extraction')
-tempate_seqs = (HERE / 'data' / 'database_files' / 'template_fasta_seq_training_set').glob('*.fasta')
+apo_pdbs = (HERE / 'data' / 'database_files' / 'apo_pdbs_for_template_seq_extraction').resolve()
+tempate_seqs = [p.resolve() for p in (HERE / 'data' / 'database_files' / 'template_fasta_seq_training_set').glob('*.fasta')]
 
 
 # Sequence alignment using EMBOSS
@@ -182,8 +182,8 @@ def protein_ligand_concatenation (template_hits, target_fasta_file, ligands):
 currentWD = os.getcwd()
 os.chdir(args['folder'])
 
-os.makedirs("protein_comp_modeling/protein_seq_alignment_files")
-emboss_needle_search(emboss_needle, glob.glob('*.fasta')[0], tempate_seqs)
+os.makedirs("protein_comp_modeling/protein_seq_alignment_files", exist_ok=True)
+emboss_needle_search(emboss_needle, glob.glob('*.fasta')[0], tempate_seqs[:10])
 
 emboss_alignments = glob.glob('protein_comp_modeling/protein_seq_alignment_files/*.needle')
 rocs_single_rpt = 'ROCS/single_report_file_sorted.csv'
@@ -193,7 +193,7 @@ template_hits = 'protein_comp_modeling/template_hits.csv'
 seq_alin_file = 'protein_comp_modeling/protein_seq_alignment_files/'
 modeling(template_hits, apo_pdbs, seq_alin_file, glob.glob('*.fasta')[0])
 
-os.mkdir("protein_ligand_complex_top_1_comp_model")
+os.makedirs("protein_ligand_complex_top_1_comp_model", exist_ok=True)
 protein_ligand_concatenation(template_hits, glob.glob("*.fasta")[0], glob.glob("sdf2params/*.pdb"))
 
 os.chdir(currentWD)

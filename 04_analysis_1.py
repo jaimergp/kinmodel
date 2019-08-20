@@ -12,7 +12,7 @@ args = vars(ap.parse_args())
 # First minimization analysis
 
 def analysis_1(score_file_paths):
-    
+
     table_df = pd.DataFrame(columns = ('MODEL', 'BOUND', 'UNBOUND', 'DIFFERENCE'))
     ind=1
     for path in score_file_paths:
@@ -31,7 +31,7 @@ def analysis_1(score_file_paths):
     table_df = table_df.sort_values(by =['DIFFERENCE'], ascending=True)
     table_df.to_csv('mini_protein_ligand_complex_top_1_comp_model/rosetta_energy_table.csv', sep=',', index=None)
     table_df['MODEL'][0:10].to_csv('mini_protein_ligand_complex_top_1_comp_model/top_10_models_based_on_rosetta_energy.txt', index=None)
-    os.mkdir('top_10_mini_models_from_first_comp_model')
+    os.makedirs('top_10_mini_models_from_first_comp_model', exist_ok=True)
     table_df[0:10].to_csv('top_10_mini_models_from_first_comp_model/top_10_models_rosetta_energy.csv', sep=',', index=None)
     for model in table_df['MODEL'][0:10]:
         pre_mini_model = '{}.pdb'.format('_'.join(model.split('_')[1:]))

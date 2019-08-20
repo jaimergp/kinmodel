@@ -12,14 +12,14 @@ ap.add_argument("-f", "--folder", required=True, help="Enter into the folder")
 args = vars(ap.parse_args())
 
 # Common paths
-
+HERE = Path(__file__).parent
 ROSETTA_ROOT = os.environ.get('ROSETTA_ROOT', os.path.expanduser('~/.local/rosetta_bin_linux_2019.22.60749_bundle'))
 OPENEYE_ROOT = os.environ.get('OPENEYE_ROOT', os.path.expanduser('~/.local/openeye'))
 
 OMEGA = f"{OPENEYE_ROOT}/bin/omega2"
 ROCS = f"{OPENEYE_ROOT}/bin/rocs"
-mol2params = f"python {ROSETTA_ROOT}/main/source/scripts/python/public/generic_potential/mol2genparams.py"
-# mol2params = f"python {HERE / "molfile_to_params_kiruba_modified.py}"
+# mol2params = f"python {ROSETTA_ROOT}/main/source/scripts/python/public/generic_potential/mol2genparams.py"
+mol2params = f"python {HERE}/molfile_to_params_kiruba_modified.py"
 template_lig_library = [p.resolve() for p in (HERE / 'data' / 'database_files' / 'template_ligand_library_training_set_final').glob('*.pdb')]
 
 # Conformer generation using OMEGA openeye (added new flag for resolving the missing MMFF parameters in ligand using -strictatomtyping false)
@@ -87,36 +87,36 @@ def sep_hits_from_rocs_sdf_file(top_100_hits_txt_path):
 
 # Convert SDF file to PDB/PARAMS for Rosetta input
 
+# def sdftoparams(mol2params, top_hits_sdf_path):
+
+#     for file in top_hits_sdf_path:
+#         out_put_file_name = os.path.splitext(os.path.basename(file))[0]
+#         print('obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
+#         os.system('obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
+#         print('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
+#         os.system('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
+
 def sdftoparams(mol2params, top_hits_sdf_path):
 
-    for file in top_hits_sdf_path:
-        out_put_file_name = os.path.splitext(os.path.basename(file))[0]
-        print('obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
-        os.system('obabel -i sdf {0} -o mol2 -O {1}/top_100_conf/{2}.mol2'.format(file, os.getcwd(), out_put_file_name))
-        print('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
-        os.system('{0} -s {1}.mol2 --prefix=mol2params/{2}'.format(mol2params, file.split(".")[0], out_put_file_name))
-
-#def sdftoparams(mol2params, top_hits_sdf_path):
-
-#    for file in top_hits_sdf_path:
-#        out_put_file_name = os.path.splitext(os.path.basename(file))[0]
-#        print('{0} {1} -p sdf2params/{2}'.format(mol2params, file, out_put_file_name))
-#        os.system('{0} {1} -p sdf2params/{2}'.format(mol2params, file, out_put_file_name))
+   for file in top_hits_sdf_path:
+       out_put_file_name = os.path.splitext(os.path.basename(file))[0]
+       print('{0} {1} -p sdf2params/{2}'.format(mol2params, file, out_put_file_name))
+       os.system('{0} {1} -p sdf2params/{2}'.format(mol2params, file, out_put_file_name))
 
 currentWD = os.getcwd()
 os.chdir(args['folder'])
 
-os.mkdir("OMEGA")
+os.makedirs("OMEGA", exist_ok=True)
 conf_gen(glob.glob("*.smi")[0], maxconfs=1000)
 
-os.mkdir("ROCS")
+os.makedirs("ROCS", exist_ok=True)
 lig_alignment(glob.glob("OMEGA/*.sdf")[0], template_lig_library[:10], rocs_maxconfs_output=30)
 
 combine_report_files(glob.glob("ROCS/*.rpt"))
 
-os.mkdir("top_100_conf")
+os.makedirs("top_100_conf", exist_ok=True)
 sep_hits_from_rocs_sdf_file("ROCS/top_100.txt")
 
-os.mkdir("mol2params")
+os.makedirs("sdf2params", exist_ok=True)
 sdftoparams(mol2params, glob.glob("top_100_conf/*.sdf"))
 os.chdir(currentWD)

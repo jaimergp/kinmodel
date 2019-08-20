@@ -6,6 +6,21 @@
 - Uncouple IO from calculation
 - It relies on applications rather than libraries. For example, the
   OpenEye toolkits could be used instead of the applications.
+- No error control. If one step does not produce any results, the script
+  goes on, resulting in either a exception or a silent termination with no
+  output.
+- Script 01: mol2params script relies on parts of Rosetta written for Py2.
+  Everything under <ROSETTA>/main/source/scripts/python/public/rosetta_py
+  must be updated to use `print()`, `range`, `zip` and `io.IOBase`.
+- Script 02: Input Fasta filenames cannot contain underscores.
+
+# Questions
+
+- What does `bou-min-ubo-nrg-jump` do? Reading through the source code, it provides
+  the difference of energy (score) between bound/unbound poses, with optional
+  minimization first. Can we replicate that with single point potential energies
+  or do we need to compute free energies?
+
 
 # Proposed architecture
 
